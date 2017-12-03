@@ -99,8 +99,6 @@ struct returnStruct
 };
 typedef struct returnStruct Returner;
 
-int quickSort(struct Tokenizer **arr, int left, int right, char *columnName);
-
 void swap(struct Tokenizer **a, struct Tokenizer **b);
 
 int partition(struct Tokenizer **arr, int low, int high);

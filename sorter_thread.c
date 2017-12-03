@@ -161,7 +161,7 @@ void printRecord(struct Tokenizer *tk, FILE *f)
 // Returns the newly created struct with everything malloc'd correctly.
 struct Tokenizer *TKCreate(char *ts, int gQuoteCount)
 {
-		  char * sp;
+		char * sp;
         struct Tokenizer *newNode = malloc(sizeof(struct Tokenizer));
         if (strlen(ts) == 0)
         {
@@ -395,6 +395,7 @@ void *sorter(void *argp)
         if (blah == 0)
         {
                 printf("Filename: %s, ERROR: Empty file.\n", filename);
+
         }
 
         int FileArraySize = 1000;
@@ -454,6 +455,7 @@ int is_Valid_CSV(struct dirent *file)
         {
                 return 0;
         }
+        
         return -1;
 }
 
@@ -758,7 +760,6 @@ int main(int argc, char **argv)
         {
                 pthread_join(files[z], (void *)&gatherFiles[z]);
                 globalCounter += gatherFiles[z]->size;
-                //  printf("joining file z= %d\n",z );
         }
         
        // printf("total rows: %d\n", globalCounter);
@@ -778,7 +779,7 @@ This upcoming section does rounds of merging, spawning threads to merge pairs of
         int round = 0;
         for (round = 0; round < fileRounds; round++)
         {
-                //printf("round: %d\n", round);
+               // printf("round: %d\n", round);
                 int intRoundAmount = (int)(ceil(roundAmount / 2));
                 pthread_t filesMerge[intRoundAmount];
                 // send pairs of 2 off to merge
@@ -865,9 +866,9 @@ This upcoming section does rounds of merging, spawning threads to merge pairs of
                 roundAmount = ceil(roundAmount / 2);
         }
 
-        //printf("All files are merged.\n");
         if (totalFiles != 0)
         {
+                printf("printing\n");
                 fprintf(finalOutput, "color,director_name,num_critic_for_reviews,duration,director_facebook_likes,actor_3_facebook_likes,actor_2_name,actor_1_facebook_likes,gross,genres,actor_1_name,movie_title,num_voted_users,cast_total_facebook_likes,actor_3_name,facenumber_in_poster,plot_keywords,movie_imdb_link,num_user_for_reviews,language,country,content_rating,budget,title_year,actor_2_facebook_likes,imdb_score,aspect_ratio,movie_facebook_likes\n");
                 struct Tokenizer **ptr = gatherFiles[0]->array;
 
@@ -880,12 +881,6 @@ This upcoming section does rounds of merging, spawning threads to merge pairs of
 
         printf("\nTotal number of threads: %d\n", totalThreads);
 
-        //free(finalStruct);
-        // traverse through directories
-        // looking for csv files
-        // then fork and call sorter(inputfile, outputfile, outputdirectory)
-        // inside sorter first check if the file is a valid movie file to sort
-        // sort it and then output to the file specified and the directory specified
 
         return 0;
 }
