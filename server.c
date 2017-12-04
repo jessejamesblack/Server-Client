@@ -1,4 +1,5 @@
 #include "socket.h"
+#include <string.h>
 #define PORT 8080
 int main(int argc, char const *argv[])
 {
@@ -7,7 +8,7 @@ int main(int argc, char const *argv[])
     int opt = 1;
     int addrlen = sizeof(address);
     char buffer[1024] = {0};
-    char *hello = "Hello from server";
+    char *hello = "Hi jesse you suck";
 
     // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -28,26 +29,47 @@ int main(int argc, char const *argv[])
     address.sin_port = htons(PORT);
 
     // Forcefully attaching socket to the port 8080
-    if (bind(server_fd, (struct sockaddr *)&address,
+
+ if (bind(server_fd, (struct sockaddr *)&address,
              sizeof(address)) < 0)
     {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
-    if (listen(server_fd, 3) < 0)
+   
+ if (listen(server_fd, 3) < 0)
     {
         perror("listen");
         exit(EXIT_FAILURE);
     }
-    if ((new_socket = accept(server_fd, (struct sockaddr *)&address,
-                             (socklen_t *)&addrlen)) < 0)
+pthread_t tids[1000];
+tidCount = 0;
+char * test = malloc(20);
+strcpy(test, "test");
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    while ((new_socket = accept(server_fd, (struct sockaddr *)&address,
+                             (socklen_t *)&addrlen)))
     {
-        perror("accept");
-        exit(EXIT_FAILURE);
+	puts("connection accepted, spawning thread to process the client");
+	pthread_mutex_lock(&mutex);
+	tidCount++;
+	pthread_create(&tids[tidCount], NULL, clientHandler, test); 
+	pthread_mutex_unlock(&mutex);
     }
     valread = read(new_socket, buffer, 1024);
     printf("%s\n", buffer);
     send(new_socket, hello, strlen(hello), 0);
-    printf("Hello message sent\n");
-    return 0;
+    printf("Hello message sent\n");   
+
+ return 0;
 }
+
+void * clientHandler (void * args){
+	int sock * 
+	
+	
+	
+}
+
+
+
