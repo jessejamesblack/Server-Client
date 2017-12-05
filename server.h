@@ -1,5 +1,5 @@
-#ifndef SOCKET_H
-#define SOCKET_H
+#ifndef SERVER_H
+#define SERVER_H
 #include <stdio.h>
 #include <sys/socket.h>
 #include <stdlib.h>
@@ -18,15 +18,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <math.h>
-/*****
-*
-*	Define structures and function prototypes for your sorter
-*
-*
-*
-******/
 
-//Suggestion: define a struct that mirrors a record (row) of the data set
 
 struct Tokenizer
 {
@@ -61,13 +53,6 @@ struct Tokenizer
 };
 typedef struct Tokenizer J;
 
-struct tids
-{
-  pthread_t tid;
-  struct tids *next;
-};
-typedef struct tids Tids;
-
 struct mergeArgs
 {
   struct Tokenizer **arr1;
@@ -80,16 +65,6 @@ struct mergeArgs
 };
 typedef struct mergeArgs merges;
 
-
-struct argsDir
-{
-  char * path;
-  char * columnName;
-  char * outputdirectory;
-  int obool;
-};
-typedef struct argsDir ArgsDir;
-
 struct returnStruct
 {
   struct Tokenizer **array;
@@ -97,18 +72,6 @@ struct returnStruct
   int name;
 };
 typedef struct returnStruct Returner;
-
-
-void mymergesort(struct Tokenizer **arr, int size, char *columnName);
-
-void *mergeThread(void *mergeArgs);
-
-void mymerge(struct Tokenizer **arr1, int size1, struct Tokenizer **arr2, int size2, struct Tokenizer **arr3, char *columnName);
-
-void *sorter(void *args);
-
-void *sortDir(void *args);
-
 
 struct clientArgs
 {
@@ -137,8 +100,11 @@ struct fileArgs
 };
 typedef struct args Args;
 
-
-
-void * clientHandler(void *);
+Returner * sorter(char * filename, char * columnName);
+struct Tokenizer * TKCreate(char *ts, int gQuoteCount);
+void printRecord(struct Tokenizer *tk, FILE *f);
+char *strtokk(char *str, char const *delims, char ** sp);
+char *trimwhitespace(char *str);
+void * clientHandler(void * args);
 
 #endif
