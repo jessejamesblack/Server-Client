@@ -88,6 +88,18 @@ int main(int argc, char const *argv[])
 	printf("Required parameters: -c -h -p\n");
 	return 1;
     }
+   
+   int status; 
+   struct addrinfo netadd;
+	struct addrinfo *netinfo;
+	netadd.ai_family = AF_INET;
+	netadd.ai_socktype = SOCK_STREAM;
+	netadd.ai_flags = AI_PASSIVE;
+	if ((status = getaddrinfo(host_name, NULL, &netadd, &netinfo)) != 0)
+	{
+		printf("Error on socket creation.\n");
+		exit(1);
+	}
 
     printf("directory: %s\n", directory);
     printf("output directory: %s\n", output_directory);
@@ -112,7 +124,8 @@ int main(int argc, char const *argv[])
     //printf("%s\n", netinfo->ai_socktype);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if (inet_pton(AF_INET, "128.6.13.203", &serv_addr.sin_addr) <= 0)
+    //if (inet_pton(AF_INET, "128.6.13.203", &serv_addr.sin_addr) <= 0)
+    if (inet_pton(netinfo->ai_family, netinfo->ai_socktype, netinfo->ai_protocol))
     {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
