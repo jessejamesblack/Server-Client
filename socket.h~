@@ -119,6 +119,14 @@ struct clientArgs
 typedef struct clientArgs ClientArgs;
 
 
+typedef struct clientArrayEntry{
+	pthread_t clientTID;
+   int clientReadyToJoin;
+	int openSpotInArray;
+	int clientID;
+	int socketID;
+} ClientArrayEntry;
+
 
 struct fileArgs
 {

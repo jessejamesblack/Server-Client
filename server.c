@@ -47,35 +47,19 @@ Returner * sorter(char * filename, char * columnName)
                 printf("Error: No Entries in CSV to sort.\n");
                 return NULL;
         }
-      FILE * before = fopen("beforemerge", "w");
-      FILE * after = fopen("aftermerge", "w");
-      int u = 0;	
-      printf("filesize: %d", fileSize);
-      
-		for(u = 0; u < fileSize; u++){
-			printRecord(fileArray[u], before);	
-		}
-        
-        
-        
+
+
         mymergesort(fileArray, fileSize, columnName);
         
         
         
         
-		for(u = 0; u < fileSize; u++){
-			//printf("%d\n", u);
-			printRecord(fileArray[u], after);	
-		}        
-        //return NULL;
-        
         Returner * ret = malloc(sizeof(*ret));
         ret->array = fileArray;
 		  ret->size = fileSize;
         
+        // always make sure to close files when done with them
         fclose(moviefile);
-        fclose(before);
-		  fclose(after);
         
         return ret;
 }
@@ -427,7 +411,7 @@ char *trimwhitespace(char *str)
 	
 	
 int main(int argc, char *argv[])
-	{
+{
 		int clientArraySize = 50;
 	/*	if(argc < 3){
 			printf("invalid amount of arguments.\n");
@@ -501,15 +485,12 @@ int main(int argc, char *argv[])
 			
  }
 	 return 0;
-	}
+}
 
 
 void * clientHandler (void * args){
-	
-
-		// need to grab the column name to sort on here
-
-
+		
+		// grabbing arguments from the spawned client connection
 		ClientArgs * arg = args; 
 		int socketFD = (int) arg->socketFD;	
 		int clientID = (int) arg->clientID;
@@ -581,6 +562,7 @@ void * clientHandler (void * args){
 	//	printf("%d\n", u);
 		printRecord(sortedArray[u], output);	
 	}
+	
 	printf("done printing to output file on server\n");
 	fclose(output);
 	
@@ -612,7 +594,7 @@ void * clientHandler (void * args){
 					break;
 			}		
 		}
-	pthread_mutex_unlock(&clientArrayLock);
+
 		
 		*/
 		

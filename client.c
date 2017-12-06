@@ -1,17 +1,45 @@
 #include "client.h"
-#include "socket.h"
-#include <pthread.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 #define TEST_SIZE 7
 
 pthread_mutex_t send_file_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t totalThreadsLock = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_t tids[100000]; 
+int totalThreads = 0;
 
 int sockfd = 0;
+
+const char *get_filename_ext(const char *filename)
+{
+        //printf("in file ext funct\n");
+        const char *dot = strrchr(filename, '.');
+        if (!dot || dot == filename)
+                return "";
+        return dot + 1;
+}
+
+int is_Valid_CSV(struct dirent *file)
+{
+        if (strstr(file->d_name, "-sorted-"))
+        {
+                return -1;
+        }
+        if (strstr(file->d_name, "Client"))
+        {
+                return -1;
+        }
+        if (strstr(file->d_name, "output"))
+        {
+                return -1;
+        }
+        if (strcasecmp(get_filename_ext(file->d_name), "csv") == 0)
+        {
+                return 0;
+        }
+        
+        return -1;
+}
+
 
 int main(int argc, char const *argv[])
 {
@@ -31,7 +59,7 @@ int main(int argc, char const *argv[])
     char *port_number;
     char *host_name;
 
-    char dir[4096];
+    char dirr[4096];
     char out_folder[4096];
     
     // The req_paramate
@@ -50,9 +78,9 @@ int main(int argc, char const *argv[])
 	}
 	else if (!strcmp(argv[i], "-d"))
 	{
-	    strcpy(dir, argv[i+1]);
-	    strcat(dir, "/");
-	    directory = dir;
+	    strcpy(dirr, argv[i+1]);
+	    strcat(dirr, "/");
+	    directory = dirr;
 	    i += 2;
 	}
 	else if (!strcmp(argv[i], "-o"))
@@ -125,42 +153,7 @@ if (p == NULL) {
      fprintf(stderr, "failed to connect\n");
      exit(2);
  }                                                                         
-//freeddrinfo(servinfo);
 
-   // struct sockaddr_in address;
-   // struct sockaddr_in serv_addr;
-   // int valread;
-   // if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-   // {
-    //    printf("\n Socket creation error \n");
-  //      return -1;
-//    }
-
-  //  memset(&serv_addr, '0', sizeof(serv_addr));
-
-   // serv_addr.sin_family = AF_INET; 
-   // serv_addr.sin_port = htons(atoi(port_number));
-   	
-//	struct addrinfo hints, *result;
-//	memset(&hints, 0, sizeof(struct addrinfo));
-//	hints.ai_family = AF_NET;
-//	hints.ai_socktype = SOCK_STREAM;
-//	hints.ai_flags = AI_PASSIVE;
-//	int s;
-//	s = getaddrinfo(host_name, "80", &hints, &results); 
-	
-    // Convert IPv4 and IPv6 addresses from text to binary form
-  //  if (inet_pton(AF_INET, "128.6.13.203", &serv_addr.sin_addr) <= 0)
-   // {
-    //    printf("\nInvalid address/ Address not supported \n");
-     //   return -1;
-   // }
-
-//    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
- //   {
-  //      printf("\nConnection Failed \n");
-   //     return -1;
-   // }
 
     char buffer[50];
     bzero(buffer, 50);
@@ -174,25 +167,142 @@ if (p == NULL) {
     write(sockfd, buffer, strlen(buffer));
     printf("%s\n", buffer);
 
-    // Need to add code to receive connection id that will later be used to request sorted file and close connection with server.mak
-    // Need to change to create thread for each csv file and traverse directory otherwise.
-    CArgs *arg = malloc(sizeof(*arg));
-    arg->path = "./";
-    arg->filename = "movie_metadata.csv";
+    
+	// traverse directories spawning threads to send files to the server
+	// need to have a join loop after the traverse directories is done
+	// after the join loop, create a new result file and set everything up so the server can write the results back to this client
+	// have to send the server a dump request  
+	
+		 DIR *dir = opendir(directory);
+        if (dir)
+        {
+                /* Directory exists. */
+                closedir(dir);
+        }
+        else if (ENOENT == errno)
+        {
+                fflush(stdout);
+                printf("\nDirectory to search in is invalid. Please input valid directory. \n\n");
+                fflush(stdout);
+                return -1;
+        }
 
-    pthread_t tid;
-    pthread_t tid1;
-    pthread_t tid2;
+		  int obool = 0;
+        ArgsDir *argsdir = malloc(sizeof(*argsdir));
+        argsdir->obool = obool;
+        argsdir->path = malloc(strlen(directory) + 1);
+        argsdir->outputdirectory = malloc(strlen(output_directory) + 1);
+        argsdir->columnName = malloc(strlen(columnName) + 1);
+        strcpy(argsdir->path, directory);
+        strcpy(argsdir->outputdirectory, output_directory);
+        strcpy(argsdir->columnName, columnName);	
+	
+	
+	    sortDir(argsdir);
+	    
+	    int y = 0;
+	    for(y = 0; y < totalThreads; y++){
+	    	pthread_join(tids[y], NULL);
+	    	printf("joined %d\n", y);
+	    
+	    }
 
-    pthread_create(&tid, NULL, send_file, arg);
-    //pthread_create(&tid1, NULL, send_file, arg);
-    //pthread_create(&tid2, NULL, send_file, arg);
-    pthread_join(tid, NULL);
-    //pthread_join(tid1, NULL);
-    //pthread_join(tid2, NULL);
     
     return 0;
 }
+
+void *sortDir(void *argp)
+{
+        ArgsDir *args = argp;
+        int obool = args->obool;
+        char *path = args->path;
+        char *columnName = args->columnName;
+        char *outputdirectory = args->outputdirectory;
+
+        struct dirent *currentDirFile; // Pointer for directory entry
+        DIR *currentDir = opendir(path);
+
+        if (currentDir == NULL) // opendir returns NULL if couldn't open directory
+        {
+                printf("Could not open current directory\n");
+        }
+
+        while ((currentDirFile = readdir(currentDir)) != NULL)
+        {
+                //current dirent is a folder that needs to be forked
+                if (currentDirFile->d_type == DT_DIR)
+                {
+                        // fork this new directory to be processed
+                        if (strcmp(currentDirFile->d_name, ".") == 0)
+                        {
+                                continue;
+                        }
+                        if (strcmp(currentDirFile->d_name, "sorter_thread.dSYM") == 0)
+                        {
+                                continue;
+                        }
+                        if (strcmp(currentDirFile->d_name, "..") == 0)
+                        {
+                                continue;
+                        }
+                        if (strcmp(currentDirFile->d_name, ".git") == 0)
+                        {
+                                continue;
+                        }
+
+                        char fullpath[1024];
+                        fullpath[0] = '\0';
+                        strcpy(fullpath, path);
+                        strcat(fullpath, "/");
+                        strcat(fullpath, currentDirFile->d_name);
+
+                        ArgsDir *argsdir = malloc(sizeof(*argsdir));
+                        argsdir->obool = obool;
+                        argsdir->path = malloc(strlen(fullpath) + 1);
+                        argsdir->outputdirectory = malloc(strlen(outputdirectory) + 1);
+                        argsdir->columnName = malloc(strlen(columnName) + 1);
+                        strcpy(argsdir->path, fullpath);
+                        strcpy(argsdir->outputdirectory, outputdirectory);
+                        strcpy(argsdir->columnName, columnName);
+
+								// recursively search for more files to send to the server
+                        sortDir(argsdir);
+                }
+                else if (is_Valid_CSV(currentDirFile) == 0)
+                {
+                        char outputPath[1024];
+                        strcpy(outputPath, path);
+                        char fullpath[1024];
+                        strcpy(fullpath, path);
+                        strcat(fullpath, "/");
+                        strcat(fullpath, currentDirFile->d_name);
+                        
+                        if (obool == 0)
+                        {
+                                outputdirectory = outputPath;
+                        }
+ 
+                          CArgs *arg = malloc(sizeof(*arg));
+   							  arg->path = path;
+   							  arg->filename = currentDirFile->d_name;
+   							  //printf("arg->path: %s\n", arg->path);
+   							  //printf("arg->filename: %s\n", arg->filename);
+
+                        pthread_mutex_lock(&totalThreadsLock);
+                        totalThreads++;
+                        pthread_create(&tids[totalThreads - 1], NULL, send_file, arg);
+                        pthread_mutex_unlock(&totalThreadsLock);
+                }
+                // INVALID file, not a directory or a valid csv file
+                else
+                {
+                        continue;
+                }
+        }
+
+        return NULL;
+}
+
 
 void * send_file(void * args)
 {
@@ -223,3 +333,4 @@ void * send_file(void * args)
     pthread_mutex_unlock(&send_file_lock);
     pthread_exit(NULL);
 }
+
