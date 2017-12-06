@@ -11,7 +11,7 @@
 
 pthread_mutex_t send_file_lock = PTHREAD_MUTEX_INITIALIZER;
 
-int sock = 0;
+int sockfd = 0;
 
 int main(int argc, char const *argv[])
 {
@@ -95,34 +95,72 @@ int main(int argc, char const *argv[])
     printf("port number: %s\n", port_number);
     printf("host name: %s\n", host_name);
 
-    struct sockaddr_in address;
-    struct sockaddr_in serv_addr;
-    int valread;
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        printf("\n Socket creation error \n");
-        return -1;
-    }
+struct addrinfo hints, *servinfo, *p;
+int rv;
+memset(&hints, 0, sizeof hints);
+hints.ai_family = AF_INET; // use AF_INET6 to force IPv6
+hints.ai_socktype = SOCK_STREAM;
 
-    memset(&serv_addr, '0', sizeof(serv_addr));
+if ((rv = getaddrinfo(host_name, port_number, &hints, &servinfo)) != 0) {
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+    exit(1);
+}
 
-    serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(atoi(port_number));
-    
-    //printf("%s\n", netinfo->ai_socktype);
+// loop through all the results and connect to the first we can
+ for(p = servinfo; p != NULL; p = p->ai_next) {
+     if ((sockfd = socket(p->ai_family, p->ai_socktype,p->ai_protocol)) == -1) {
+             perror("socket");
+             continue;
+     }
 
+     if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+             perror("connect");
+             close(sockfd);
+             continue;
+        }
+
+     break; // if we get here, we must have connected successfully
+  }
+if (p == NULL) {
+     fprintf(stderr, "failed to connect\n");
+     exit(2);
+ }                                                                         
+//freeddrinfo(servinfo);
+
+   // struct sockaddr_in address;
+   // struct sockaddr_in serv_addr;
+   // int valread;
+   // if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+   // {
+    //    printf("\n Socket creation error \n");
+  //      return -1;
+//    }
+
+  //  memset(&serv_addr, '0', sizeof(serv_addr));
+
+   // serv_addr.sin_family = AF_INET; 
+   // serv_addr.sin_port = htons(atoi(port_number));
+   	
+//	struct addrinfo hints, *result;
+//	memset(&hints, 0, sizeof(struct addrinfo));
+//	hints.ai_family = AF_NET;
+//	hints.ai_socktype = SOCK_STREAM;
+//	hints.ai_flags = AI_PASSIVE;
+//	int s;
+//	s = getaddrinfo(host_name, "80", &hints, &results); 
+	
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if (inet_pton(AF_INET, "128.6.13.203", &serv_addr.sin_addr) <= 0)
-    {
-        printf("\nInvalid address/ Address not supported \n");
-        return -1;
-    }
+  //  if (inet_pton(AF_INET, "128.6.13.203", &serv_addr.sin_addr) <= 0)
+   // {
+    //    printf("\nInvalid address/ Address not supported \n");
+     //   return -1;
+   // }
 
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    {
-        printf("\nConnection Failed \n");
-        return -1;
-    }
+//    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+ //   {
+  //      printf("\nConnection Failed \n");
+   //     return -1;
+   // }
 
     char buffer[50];
     bzero(buffer, 50);
@@ -133,7 +171,7 @@ int main(int argc, char const *argv[])
     	sprintf(buffer, "%d", strlen(columnName));
     	
     strcat(buffer, columnName);
-    write(sock, buffer, strlen(buffer));
+    write(sockfd, buffer, strlen(buffer));
     printf("%s\n", buffer);
 
     // Need to add code to receive connection id that will later be used to request sorted file and close connection with server.mak
@@ -174,11 +212,11 @@ void * send_file(void * args)
     fgets(buffer, 1024, fp);
     
     while (fgets(buffer, 1024, fp) != NULL) {
-		write(sock, buffer, strlen(buffer));
+		write(sockfd, buffer, strlen(buffer));
     }
     bzero(buffer, 1024);
 //   strcat(buffer, "FILE DONE");
-    write(sock, buffer, strlen(buffer));
+    write(sockfd, buffer, strlen(buffer));
 
     fclose(fp);
    

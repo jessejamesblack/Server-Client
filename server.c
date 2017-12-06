@@ -426,7 +426,7 @@ char *trimwhitespace(char *str)
 	
 	
 	
-int main(int argc, char const *argv[])
+int main(int argc, char *argv[])
 	{
 		int clientArraySize = 50;
 	/*	if(argc < 3){
@@ -434,9 +434,10 @@ int main(int argc, char const *argv[])
 			return 1;
 		}*/
 		
-		 char * portString = (char *)argv[3];
-		// int port = atoi(portString);
-		 int port = 8080;
+		 char * portString = argv[2];
+	//printf("%s\n", portString);	 
+	int port = atoi(portString);
+		// int port = 8080;
 		  
 	    int server_fd, new_socket, valread;
 	    struct sockaddr_in address;
@@ -464,8 +465,8 @@ int main(int argc, char const *argv[])
 	    address.sin_addr.s_addr = INADDR_ANY;
 	    address.sin_port = htons(port);
 	    
-	    printf("PORT: %d", port);
-	
+	    printf("PORT: %d\n", port);
+	fflush(stdout);
 	
 	 	if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
 	   {
