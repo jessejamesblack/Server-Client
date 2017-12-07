@@ -53,7 +53,6 @@ Returner * sorter(char * filename, char * columnName)
         
         
         
-        
         Returner * ret = malloc(sizeof(*ret));
         ret->array = fileArray;
 		  ret->size = fileSize;
@@ -412,13 +411,15 @@ char *trimwhitespace(char *str)
 	
 int main(int argc, char *argv[])
 {
+	printf("Received connections from: ");
+	fflush(stdout);
 		int clientArraySize = 50;
 	/*	if(argc < 3){
 			printf("invalid amount of arguments.\n");
 			return 1;
 		}*/
 		
-		 char * portString = argv[2];
+   char * portString = argv[2];
 	//printf("%s\n", portString);	 
 	int port = atoi(portString);
 		// int port = 8080;
@@ -462,17 +463,28 @@ int main(int argc, char *argv[])
 	   {
 	        perror("listen");
 	        exit(EXIT_FAILURE);
-	   }
-	   	   
+	   } 	   
 	   
 		int tidCount = 0;
 		int k = 0; // index for finding a spot to put the client in client array
 		int j = 0; // index for the join checking loop
-		
+		char ipstr[INET6_ADDRSTRLEN];
 
-  while ((new_socket = accept(server_fd, (struct sockaddr *)&address,(socklen_t *)&addrlen)))
-	   {
-			//puts("connection accepted, spawning thread to process the client");
+while ((new_socket = accept(server_fd, (struct sockaddr *)&address,(socklen_t *)&addrlen)))
+{
+		if (address.ss_family == AF_INET) {
+  		  struct sockaddr_in *s = (struct sockaddr_in *)&address;
+  		  port = ntohs(s->sin_port);
+    	  inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
+      } 
+      else 
+      { // AF_INET6
+         struct sockaddr_in6 *s = (struct sockaddr_in6 *)&address;
+         port = ntohs(s->sin6_port);
+         inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
+      }
+			printf("<%s> ", ipstr);
+			fflush(stdout);
 			k = 0;
 			j = 0;
 			ClientArgs * args = malloc(sizeof(*args));
@@ -584,7 +596,7 @@ void * clientHandler (void * args){
                 return NULL;
    }
       
-  // printf("size: %d\n", fileSize);
+   // printf("size: %d\n", fileSize);
 	mymergesort(fileArray, fileSize, columnName);	
 	
 	// creating Sorted file on the server, to be used to transmit back to the client
@@ -615,8 +627,6 @@ fclose(outputToClient);
 
 
 // Need to free all malloced structures for this client here:
-
-
 
 
 

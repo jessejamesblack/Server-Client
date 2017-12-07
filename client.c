@@ -119,11 +119,11 @@ int main(int argc, char const *argv[])
 	return 1;
     }
 
-    printf("directory: %s\n", directory);
-    printf("output directory: %s\n", output_directory);
-    printf("column name: %s\n", columnName);
-    printf("port number: %s\n", port_number);
-   printf("host name: %s\n", host_name);
+   // printf("directory: %s\n", directory);
+   // printf("output directory: %s\n", output_directory);
+  //  printf("column name: %s\n", columnName);
+  //  printf("port number: %s\n", port_number);
+  //  printf("host name: %s\n", host_name);
 
 struct addrinfo hints, *servinfo, *p;
 int rv;
