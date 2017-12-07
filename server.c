@@ -541,7 +541,7 @@ void * clientHandler (void * args){
       struct Tokenizer **fileArray = malloc(FileArraySize * sizeof(struct Tokenizer *));
       int gQuoteCount = 0;
 		char header[6];
-		char footer[1];
+		//char footer[1];
 		recv(socketFD, header, 5, 0);
 		char bufferLen[5];
 		
@@ -555,27 +555,37 @@ void * clientHandler (void * args){
 int bytes = 0;
  while(1) 
  {
- 			int nextLineIsGood = 0;
- 			while(nextLineIsGood == 0){
+ 			int totalBytesRecv = 0;
+ 			int b = 0;
+ 			while(totalBytesRecv != bufferLength){
+				b = recv(socketFD, buffer, bufferLength, 0); 
+				totalBytesRecv += b;		
+ 			}
+ 			//int nextLineIsGood = 0;
+ 			//int lineNumber = 0;
+ 			//while(nextLineIsGood == 0){
  				
  				printf("\nbuffer length for this read that client wants to send: %d\n", bufferLength);
- 		   	bytes = recv(socketFD, buffer, bufferLength, 0);
- 		   	printf("bytes actually read: %d\n", bytes);
- 		   	if(bytes == bufferLength){
+ 		   	//bytes = recv(socketFD, buffer, bufferLength, 0);
+ 		   	printf("bytes actually read: %d\n", totalBytesRecv);
+ 		   	/*if(bytes == bufferLength){
 					 	nextLineIsGood = 1;
 					 	//good
+					 	printf("good %d\n");
 					 	footer[0] = '$';
 					 	write(socketFD, footer, 1);	   	
  		   	}	
  		   	else{
  		   		//no good
+ 		   		printf("not good %d\n");
 					footer[0] = '*';
 					write(socketFD, footer, 1);
 					bzero(buffer, 1024); 		   	
- 		   	}
+ 		   	}*/
+ 		   	//lineNumber++;
 			//Need to check if the server got all the bytes that the client said it was going to send, if it did, everything is good, continue to tokenize this line
 			// if not need keep trying to read the 	
-			}				   
+			//}				   
  		   
 			buffer[bufferLength] = '\0';
          struct Tokenizer *newNode;
