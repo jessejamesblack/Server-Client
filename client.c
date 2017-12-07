@@ -355,6 +355,7 @@ void * send_file(void * args)
     char buffer[1024] = {0};
 
     char descriptor[1024];
+    char footer[2];
     strcpy(descriptor, arg->path);
     strcat(descriptor, "/");
     strcat(descriptor, arg->filename);
@@ -364,11 +365,13 @@ void * send_file(void * args)
     // Throwing away the header, server is hard coded for this .csv file.
     fgets(buffer, 1024, fp);
     
-    
  while (fgets(buffer, 1024, fp) != NULL) {
 		// need to write a header first that has a byte for whether the incoming bytes are a line of the csv or not, and also how many bytes it is going to write for a specific line    	
     	header[0] = '$';
     	int lineLen = strlen(buffer);
+    	
+    	int LineIsSent = 0;
+    
     	
     	if(lineLen < 1000){
     		strcat(header, "0");
@@ -388,9 +391,23 @@ void * send_file(void * args)
     		write(sockfd, header, strlen(header));	    	
     	}
     	//printf("actual buffer length:%d\n", strlen(buffer) );
+
+   // loop     	
+   	while(LineIsSent == 0){
 		write(sockfd, buffer, strlen(buffer));
+		
+		// read the footer from server, if line is good set LineIsSent to 1 to move onto the next line
+		read(sockfd, footer, 1);
+		if (footer[0] == '$')
+			LineIsSent = 1;
+	}
 		bzero(buffer, lineLen);
 		bzero(header, 6);
+		
+		
+		// zero out the footer here
+		
+		
     }
    
     fclose(fp);

@@ -541,6 +541,7 @@ void * clientHandler (void * args){
       struct Tokenizer **fileArray = malloc(FileArraySize * sizeof(struct Tokenizer *));
       int gQuoteCount = 0;
 		char header[6];
+		char footer[1];
 		recv(socketFD, header, 5, 0);
 		char bufferLen[5];
 		
@@ -551,11 +552,31 @@ void * clientHandler (void * args){
 		bufferLen[5] = '\0';
 		int bufferLength = atoi(bufferLen);
 
-
+int bytes = 0;
  while(1) 
  {
- 		//	printf("buffer length for this read: %d\n", bufferLength);
- 			recv(socketFD, buffer, bufferLength, 0);
+ 			int nextLineIsGood = 0;
+ 			while(nextLineIsGood == 0){
+ 				
+ 				printf("\nbuffer length for this read that client wants to send: %d\n", bufferLength);
+ 		   	bytes = recv(socketFD, buffer, bufferLength, 0);
+ 		   	printf("bytes actually read: %d\n", bytes);
+ 		   	if(bytes == bufferLength){
+					 	nextLineIsGood = 1;
+					 	//good
+					 	footer[0] = '$';
+					 	write(socketFD, footer, 1);	   	
+ 		   	}	
+ 		   	else{
+ 		   		//no good
+					footer[0] = '*';
+					write(socketFD, footer, 1);
+					bzero(buffer, 1024); 		   	
+ 		   	}
+			//Need to check if the server got all the bytes that the client said it was going to send, if it did, everything is good, continue to tokenize this line
+			// if not need keep trying to read the 	
+			}				   
+ 		   
 			buffer[bufferLength] = '\0';
          struct Tokenizer *newNode;
          newNode = TKCreate(buffer, gQuoteCount);
