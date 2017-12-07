@@ -614,7 +614,6 @@ write(socketFD, outputBuff, strlen(outputBuff));
 fclose(outputToClient);
 
 
-if(remove(filename) == 0){
 
 
 // Need to free all malloced structures for this client here:

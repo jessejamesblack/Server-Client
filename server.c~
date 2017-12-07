@@ -614,10 +614,13 @@ write(socketFD, outputBuff, strlen(outputBuff));
 fclose(outputToClient);
 
 
-// Getting rid of the sorted file that is stored on the server.
-remove(filename);
+if(remove(filename) == 0){
 
-//free all malloced structures for this client here if we want:
+
+// Need to free all malloced structures for this client here:
+
+
+
 
 
 //printf("Done processing client: %d\n", clientID);
