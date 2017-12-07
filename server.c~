@@ -70,7 +70,7 @@ Returner * sorter(char * filename, char * columnName)
 struct Tokenizer *TKCreate(char *ts, int gQuoteCount)
 {
 		//printf("%s\n", ts);
-		char * sp;
+		  char * sp;
         struct Tokenizer *newNode = malloc(sizeof(struct Tokenizer));
         if (strlen(ts) == 0)
         {
@@ -411,7 +411,7 @@ char *trimwhitespace(char *str)
 	
 	
 int main(int argc, char *argv[])
-	{
+{
 		int clientArraySize = 50;
 	/*	if(argc < 3){
 			printf("invalid amount of arguments.\n");
@@ -429,7 +429,7 @@ int main(int argc, char *argv[])
 	    int addrlen = sizeof(address);
 	    char buffer[1024] = {0};
 	
-		 printf("connection open for clients...\n");
+		 //printf("connection open for clients...\n");
 		 
 
 	    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -449,8 +449,8 @@ int main(int argc, char *argv[])
 	    address.sin_addr.s_addr = INADDR_ANY;
 	    address.sin_port = htons(port);
 	    
-	    printf("PORT: %d\n", port);
-	fflush(stdout);
+	    //printf("PORT: %d\n", port);
+	      fflush(stdout);
 	
 	 	if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
 	   {
@@ -472,15 +472,14 @@ int main(int argc, char *argv[])
 
   while ((new_socket = accept(server_fd, (struct sockaddr *)&address,(socklen_t *)&addrlen)))
 	   {
-			puts("connection accepted, spawning thread to process the client");
+			//puts("connection accepted, spawning thread to process the client");
 			k = 0;
 			j = 0;
 			ClientArgs * args = malloc(sizeof(*args));
 			args->clientID = clientID;
 			args->socketFD = new_socket;
 			pthread_t tid;
-			clientID++;
-							
+			clientID++;		
 			pthread_create(&tid, NULL, clientHandler, args); 
 			
  }
@@ -494,7 +493,7 @@ void * clientHandler (void * args){
 		ClientArgs * arg = args; 
 		int socketFD = (int) arg->socketFD;	
 		int clientID = (int) arg->clientID;
-		printf("socket ID: %d\n", socketFD);
+		//printf("socket ID: %d\n", socketFD);
 		
 		int valread;	
 		
@@ -516,88 +515,113 @@ void * clientHandler (void * args){
 		int b = 0;
 		int c = 0;
 		
-	//grabbing the column from socket
+	   //grabbing the column from socket
 		recv(socketFD, columnLen, 2, 0);
-		printf("length of column: %d\n", atoi(columnLen));
+		//printf("length of column: %d\n", atoi(columnLen));
 		
 		int columnAmount = atoi(columnLen);
 		
 		recv(socketFD, columnName, columnAmount, 0);
-		printf("column: %s\n", columnName);
-		
-		
-		while((b = recv(socketFD, buffer, 1024, 0)) > 0) {	
-			total+= b;
-			//printf("buffer: %s", buffer);
-			fwrite(buffer, 1, b ,file);	
-			//fprintf(file, "%s", buffer);
-			bzero(buffer, 1024);
-		}
-		fclose(file);
-		
-		
-	//I need to get the column name from the client somehow
-	Returner * sortedReturn;
-	
-	// sort file
-	sortedReturn = sorter(filename, columnName);
-	
-	// return file to client
-	// need to have sorter return an array of row structs, so we can loop through it writing to a new file, then loop through that new file writing to the socket
-	
-	char outputText[1024];
-	strcpy(outputText, "output");
-	char clientIDBufferout[1024];
-	snprintf(clientIDBufferout, 1024, "%d", clientID);
-	strcat(outputText, clientIDBuffer);	
-	
-	FILE * output = fopen(outputText, "wb");
-	int size = sortedReturn->size;
-	struct Tokenizer ** sortedArray = sortedReturn->array;
-	
-	printf("size: %d\n", size);
-	
-	int u = 0;	
-	for(u = 0; u < size; u++){
-	//	printf("%d\n", u);
-		printRecord(sortedArray[u], output);	
-	}
-	
-	printf("done printing to output file on server\n");
-	fclose(output);
-	
-	/*
-	 // writing to file on client side
-    while (fgets(buffer, 1024, output) != NULL) {
-	    write(socketFD, buffer, 1024);
-    }
-    */
-/*
-	// delete client nonsorted input file 
-	if (remove(filename) == 0)
-      printf("Deleted successfully\n");
-   else
-      printf("Unable to delete the file\n");
-	
-		// delete sorted output file 
-	if (remove(outputText) == 0)
-      printf("Deleted successfully\n");
-   else
-      printf("Unable to delete the file\n");
-	*/
-	/*int q = 0;
-	// signal ready to join, by updating the array		
-		pthread_mutex_lock(&clientArrayLock);
-		for(q = 0; q < clientArraySize; q++){
-			if(clientArray[q].clientID == clientID){
-					clientArray[q].clientReadyToJoin = 1;		
-					break;
-			}		
-		}
+		//printf("column: %s\n", columnName);
 
+/*
+----------------creating row structs for all of the rows that come in from the client------------------------
+*/		
 		
-		*/
+		int fileSize = 0;
+      int line = 0;
+      
+      int FileArraySize = 1000;
+      struct Tokenizer **fileArray = malloc(FileArraySize * sizeof(struct Tokenizer *));
+      int gQuoteCount = 0;
+		char header[6];
+		recv(socketFD, header, 5, 0);
+		char bufferLen[5];
 		
+		int a = 0;		
+		for(a = 0; a < 4; a++) {
+			bufferLen[a] = header[a+1];
+		}
+		bufferLen[5] = '\0';
+		int bufferLength = atoi(bufferLen);
+
+
+ while(1) 
+ {
+ 		//	printf("buffer length for this read: %d\n", bufferLength);
+ 			recv(socketFD, buffer, bufferLength, 0);
+			buffer[bufferLength] = '\0';
+         struct Tokenizer *newNode;
+         newNode = TKCreate(buffer, gQuoteCount);
+
+         if (fileSize > FileArraySize)
+         {
+            fileArray = realloc(fileArray, (2 * fileSize * (sizeof(struct Tokenizer *))));
+            FileArraySize = (fileSize + FileArraySize);
+         }
+                
+         fileArray[fileSize] = newNode;
+         fileSize++;
+         line++;		
+			
+		   bzero(buffer, 1024);
+		   bzero(header, 6);
+		   recv(socketFD, header, 5, 0);
+		   
+		for(a = 0; a < 4; a++) {
+			bufferLen[a] = header[a+1];
+		}
+		bufferLen[5] = '\0';
+		bufferLength = atoi(bufferLen);
+		if(header[0] == '*'){
+			break;		
+		}
+}
+		
+	if (line == 0)
+   {
+            printf("Error: No Entries in CSV to sort.\n");
+                return NULL;
+   }
+      
+  // printf("size: %d\n", fileSize);
+	mymergesort(fileArray, fileSize, columnName);	
+	
+	// creating Sorted file on the server, to be used to transmit back to the client
+	int u = 0;	
+	for(u = 0; u < fileSize; u++){
+		printRecord(fileArray[u], file);	
+	}
+	fclose(file);
+	//printf("done printing to output file on server\n");
+	
+	
+	// Need to reopen the file to reset fgets
+	FILE * outputToClient = fopen(filename, "r");
+	
+	char outputBuff[1024] = {0};
+	int index = 0;
+	while (fgets(outputBuff, 1024, outputToClient) != NULL) {
+		write(socketFD, outputBuff, strlen(outputBuff));
+		index++;
+   }	
+
+// Sending message back to the client that it can stop grabbing sorted rows
+bzero(outputBuff, 1024);
+strcpy(outputBuff, "DONE");
+write(socketFD, outputBuff, strlen(outputBuff));
+
+fclose(outputToClient);
+
+
+// Getting rid of the sorted file that is stored on the server.
+remove(filename);
+
+//free all malloced structures for this client here if we want:
+
+
+//printf("Done processing client: %d\n", clientID);
+	
 pthread_exit(NULL);
 }
 

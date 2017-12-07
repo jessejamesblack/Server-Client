@@ -6,6 +6,7 @@ pthread_mutex_t totalThreadsLock = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_t tids[100000]; 
 int totalThreads = 0;
+char header[6];
 
 int sockfd = 0;
 
@@ -200,14 +201,53 @@ if (p == NULL) {
 	
 	    sortDir(argsdir);
 	    
+	    
 	    int y = 0;
 	    for(y = 0; y < totalThreads; y++){
 	    	pthread_join(tids[y], NULL);
-	    	printf("joined %d\n", y);
-	    
 	    }
+	    printf("All files have been sent to the server.\n");	
+	
 
+	char outputty[1024];
+   strcpy(outputty, output_directory);
+   strcat(outputty, "/");
+   strcat(outputty, "AllFiles-sorted-<");
+   strcat(outputty, columnName);
+   strcat(outputty, ">.csv");
+   
+   int b = 0;
+	char buff[1024];
+	
+	FILE * finalOutput = fopen(outputty, "w");	
+	
+   fprintf(finalOutput, "color,director_name,num_critic_for_reviews,duration,director_facebook_likes,actor_3_facebook_likes,actor_2_name,actor_1_facebook_likes,gross,genres,actor_1_name,movie_title,num_voted_users,cast_total_facebook_likes,actor_3_name,facenumber_in_poster,plot_keywords,movie_imdb_link,num_user_for_reviews,language,country,content_rating,budget,title_year,actor_2_facebook_likes,imdb_score,aspect_ratio,movie_facebook_likes\n");
+				 
+		 
+		 /*
+		 ----------DUMP REQUEST----------
+		 */
+		 header[0] = '*';
+	    header[6] = '\0';
+	    write(sockfd, header, strlen(header));
+	    
+	// read lines from socket and write into finalOutput file
+	 int index = 0;
+	 while(1) {	
+	 	   b = recv(sockfd, buff, 1024, 0);
+	 		//printf("%d\n", index);
+			index++;
+			if(strstr(buff, "DONE")){
+				fwrite(buff, 1, b-4 ,finalOutput);	
+				break;
+			}
+			fwrite(buff, 1, b ,finalOutput);	
+			bzero(buff, 1024);
+	 }
+	
+	fclose(finalOutput);
     
+   // printf("done, received final result file\n");
     return 0;
 }
 
@@ -321,13 +361,35 @@ void * send_file(void * args)
     // Throwing away the header, server is hard coded for this .csv file.
     fgets(buffer, 1024, fp);
     
-    while (fgets(buffer, 1024, fp) != NULL) {
+    
+ while (fgets(buffer, 1024, fp) != NULL) {
+		// need to write a header first that has a byte for whether the incoming bytes are a line of the csv or not, and also how many bytes it is going to write for a specific line    	
+    	header[0] = '$';
+    	int lineLen = strlen(buffer);
+    	
+    	if(lineLen < 1000){
+    		strcat(header, "0");
+    		char rest[3];
+    		sprintf(rest, "%d", lineLen);
+    		strcat(header, rest);
+    		header[6] = '\0';
+    		//printf("%s\n", header);
+    		write(sockfd, header, strlen(header));
+    	}
+    	else{
+    		char rest[4];
+    		sprintf(rest, "%d", lineLen);
+    		strcat(header, rest);
+    		header[6] = '\0';
+    		//printf("%s\n", header);
+    		write(sockfd, header, strlen(header));	    	
+    	}
+    	//printf("actual buffer length:%d\n", strlen(buffer) );
 		write(sockfd, buffer, strlen(buffer));
+		bzero(buffer, lineLen);
+		bzero(header, 6);
     }
-    bzero(buffer, 1024);
-//   strcat(buffer, "FILE DONE");
-    write(sockfd, buffer, strlen(buffer));
-
+   
     fclose(fp);
    
     pthread_mutex_unlock(&send_file_lock);
