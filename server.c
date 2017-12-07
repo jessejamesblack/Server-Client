@@ -542,7 +542,14 @@ void * clientHandler (void * args){
       int gQuoteCount = 0;
 		char header[6];
 		//char footer[1];
-		recv(socketFD, header, 5, 0);
+		
+		
+		int totalHeaderBytes = 0;
+		int bb = 0;		
+		while(totalHeaderBytes != 5){		
+			bb = recv(socketFD, header, 5, 0);
+			totalHeaderBytes += bb;	
+		}
 		char bufferLen[5];
 		
 		int a = 0;		
@@ -552,9 +559,9 @@ void * clientHandler (void * args){
 		bufferLen[5] = '\0';
 		int bufferLength = atoi(bufferLen);
 
-int bytes = 0;
- while(1) 
- {
+		int bytes = 0;
+ 		while(1) 
+ 		{
  			int totalBytesRecv = 0;
  			int b = 0;
  			while(totalBytesRecv != bufferLength){
@@ -658,7 +665,7 @@ remove(filename);
 
 
 //printf("Done processing client: %d\n", clientID);
-	
+	close(socketFD);
 pthread_exit(NULL);
 }
 

@@ -116,6 +116,7 @@ int main(int argc, char const *argv[])
     if (found_par != req_parameters)
     {
 	printf("Required parameters: -c -h -p\n");
+	close(sockfd);
 	return 1;
     }
 
@@ -392,20 +393,12 @@ void * send_file(void * args)
     	}
     	//printf("actual buffer length:%d\n", strlen(buffer) );
 
-   // loop     	
-   	while(LineIsSent == 0){
+
 		write(sockfd, buffer, strlen(buffer));
 		
-		// read the footer from server, if line is good set LineIsSent to 1 to move onto the next line
-		read(sockfd, footer, 1);
-		if (footer[0] == '$')
-			LineIsSent = 1;
-	}
+		
 		bzero(buffer, lineLen);
 		bzero(header, 6);
-		
-		
-		// zero out the footer here
 		
 		
     }
@@ -414,5 +407,6 @@ void * send_file(void * args)
    
     pthread_mutex_unlock(&send_file_lock);
     pthread_exit(NULL);
+   
 }
 
