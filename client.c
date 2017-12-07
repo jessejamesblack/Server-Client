@@ -7,6 +7,7 @@ pthread_mutex_t totalThreadsLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_t tids[100000]; 
 int totalThreads = 0;
 char header[6];
+int totalFiles = 0;
 
 int sockfd = 0;
 
@@ -118,11 +119,11 @@ int main(int argc, char const *argv[])
 	return 1;
     }
 
-  //  printf("directory: %s\n", directory);
-  //  printf("output directory: %s\n", output_directory);
-  //  printf("column name: %s\n", columnName);
-  //  printf("port number: %s\n", port_number);
-  // printf("host name: %s\n", host_name);
+    printf("directory: %s\n", directory);
+    printf("output directory: %s\n", output_directory);
+    printf("column name: %s\n", columnName);
+    printf("port number: %s\n", port_number);
+   printf("host name: %s\n", host_name);
 
 struct addrinfo hints, *servinfo, *p;
 int rv;
@@ -207,7 +208,7 @@ if (p == NULL) {
 	    	pthread_join(tids[y], NULL);
 	    }
 	   // printf("All files have been sent to the server.\n");	
-	
+	if(totalFiles != 0){
 
 	char outputty[1024];
    strcpy(outputty, output_directory);
@@ -244,9 +245,10 @@ if (p == NULL) {
 			fwrite(buff, 1, b ,finalOutput);	
 			bzero(buff, 1024);
 	 }
+
 	
 	fclose(finalOutput);
-    
+}
    // printf("done, received final result file\n");
     return 0;
 }
@@ -330,6 +332,7 @@ void *sortDir(void *argp)
 
                         pthread_mutex_lock(&totalThreadsLock);
                         totalThreads++;
+                        totalFiles++;
                         pthread_create(&tids[totalThreads - 1], NULL, send_file, arg);
                         pthread_mutex_unlock(&totalThreadsLock);
                 }

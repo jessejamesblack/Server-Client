@@ -584,7 +584,7 @@ void * clientHandler (void * args){
                 return NULL;
    }
       
-  // printf("size: %d\n", fileSize);
+   printf("size: %d\n", fileSize);
 	mymergesort(fileArray, fileSize, columnName);	
 	
 	// creating Sorted file on the server, to be used to transmit back to the client
@@ -614,15 +614,13 @@ write(socketFD, outputBuff, strlen(outputBuff));
 fclose(outputToClient);
 
 
-
-
 // Need to free all malloced structures for this client here:
 
 
 
 
 
-//printf("Done processing client: %d\n", clientID);
+printf("Done processing client: %d\n", clientID);
 	
 pthread_exit(NULL);
 }
