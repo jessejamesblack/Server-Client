@@ -619,6 +619,8 @@ write(socketFD, outputBuff, strlen(outputBuff));
 
 fclose(outputToClient);
 
+// removing the sorted file on the server
+remove(filename);
 
 // Need to free all malloced structures for this client here:
 
