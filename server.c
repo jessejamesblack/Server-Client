@@ -472,6 +472,7 @@ int main(int argc, char *argv[])
 
 while ((new_socket = accept(server_fd, (struct sockaddr *)&address,(socklen_t *)&addrlen)))
 {
+	pthread_mutex_lock(&clientIDLock);
   		  struct sockaddr_in *s = (struct sockaddr_in *)&address;
   		  port = ntohs(s->sin_port);
     	  inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
@@ -485,11 +486,34 @@ while ((new_socket = accept(server_fd, (struct sockaddr *)&address,(socklen_t *)
 			args->clientID = clientID;
 			args->socketFD = new_socket;
 			pthread_t tid;
+			//need to lock this			
 			clientID++;		
 			pthread_create(&tid, NULL, clientHandler, args); 
-			
+			pthread_mutex_unlock(&clientIDLock);
+	
  }
 	 return 0;
+}
+
+
+int
+readn(int f, void *av, int n)
+{
+    char *a;
+    int m, t;
+
+    a = av;
+    t = 0;
+    while(t < n){
+        m = read(f, a+t, n-t);
+        if(m <= 0){
+            if(t == 0)
+                return m;
+            break;
+        }
+        t += m;
+    }
+    return t;
 }
 
 
@@ -499,9 +523,6 @@ void * clientHandler (void * args){
 		ClientArgs * arg = args; 
 		int socketFD = (int) arg->socketFD;	
 		int clientID = (int) arg->clientID;
-		//printf("socket ID: %d\n", socketFD);
-		
-		int valread;	
 		
 		char filename[1024];
 		strcpy(filename, "Client");
@@ -522,12 +543,16 @@ void * clientHandler (void * args){
 		int c = 0;
 		
 	   //grabbing the column from socket
-		recv(socketFD, columnLen, 2, 0);
+	   
+		readn(socketFD, columnLen, 2);	
+		   
+	   
 		//printf("length of column: %d\n", atoi(columnLen));
 		
 		int columnAmount = atoi(columnLen);
+		readn(socketFD, columnName, columnAmount);
 		
-		recv(socketFD, columnName, columnAmount, 0);
+		
 		//printf("column: %s\n", columnName);
 
 /*
@@ -541,85 +566,66 @@ void * clientHandler (void * args){
       struct Tokenizer **fileArray = malloc(FileArraySize * sizeof(struct Tokenizer *));
       int gQuoteCount = 0;
 		char header[6];
-		//char footer[1];
 		
+
+		readn(socketFD, header, 5);		
 		
-		int totalHeaderBytes = 0;
-		int bb = 0;		
-		while(totalHeaderBytes != 5){		
-			bb = recv(socketFD, header, 5, 0);
-			totalHeaderBytes += bb;	
-		}
 		char bufferLen[5];
-		
 		int a = 0;		
 		for(a = 0; a < 4; a++) {
 			bufferLen[a] = header[a+1];
 		}
 		bufferLen[5] = '\0';
 		int bufferLength = atoi(bufferLen);
-
+		//printf("bufferLength: %d\n", bufferLength);
 		int bytes = 0;
+		
+// getting all the unsorted rows from the client
  		while(1) 
  		{
- 			int totalBytesRecv = 0;
- 			int b = 0;
- 			while(totalBytesRecv != bufferLength){
-				b = recv(socketFD, buffer, bufferLength, 0); 
-				totalBytesRecv += b;		
- 			}
- 			//int nextLineIsGood = 0;
- 			//int lineNumber = 0;
- 			//while(nextLineIsGood == 0){
- 				
- 				printf("\nbuffer length for this read that client wants to send: %d\n", bufferLength);
- 		   	//bytes = recv(socketFD, buffer, bufferLength, 0);
- 		   	printf("bytes actually read: %d\n", totalBytesRecv);
- 		   	/*if(bytes == bufferLength){
-					 	nextLineIsGood = 1;
-					 	//good
-					 	printf("good %d\n");
-					 	footer[0] = '$';
-					 	write(socketFD, footer, 1);	   	
- 		   	}	
- 		   	else{
- 		   		//no good
- 		   		printf("not good %d\n");
-					footer[0] = '*';
-					write(socketFD, footer, 1);
-					bzero(buffer, 1024); 		   	
- 		   	}*/
- 		   	//lineNumber++;
-			//Need to check if the server got all the bytes that the client said it was going to send, if it did, everything is good, continue to tokenize this line
-			// if not need keep trying to read the 	
-			//}				   
- 		   
+ 			//printf("bufferLength: %d\n", bufferLength);
+ 			// reading another line sent by the client
+ 			readn(socketFD, buffer, bufferLength);
 			buffer[bufferLength] = '\0';
+			//printf("What is going to be tokenized:   %s\n", buffer);
+			
+	
+	
+			/*  Tokenizing the row grabbed from the client and putting into row struct array.  */
          struct Tokenizer *newNode;
          newNode = TKCreate(buffer, gQuoteCount);
-
          if (fileSize > FileArraySize)
          {
             fileArray = realloc(fileArray, (2 * fileSize * (sizeof(struct Tokenizer *))));
             FileArraySize = (fileSize + FileArraySize);
-         }
-                
+         }   
          fileArray[fileSize] = newNode;
          fileSize++;
          line++;		
 			
+			
+			
 		   bzero(buffer, 1024);
 		   bzero(header, 6);
-		   recv(socketFD, header, 5, 0);
 		   
+		   // reading the header again to get the next line legnth and also to check if the client is done sending its rows
+		   readn(socketFD, header, 5);
+		   header[6] = '\0';
+		 //  printf("header: %s\n", header);
+				
+				   
 		for(a = 0; a < 4; a++) {
 			bufferLen[a] = header[a+1];
 		}
 		bufferLen[5] = '\0';
 		bufferLength = atoi(bufferLen);
+		
+		
+		// client is done sending rows
 		if(header[0] == '*'){
 			break;		
 		}
+		
 }
 		
 	if (line == 0)
@@ -637,35 +643,80 @@ void * clientHandler (void * args){
 		printRecord(fileArray[u], file);	
 	}
 	fclose(file);
-	//printf("done printing to output file on server\n");
 	
 	
-	// Need to reopen the file to reset fgets
+	
+
+
 	FILE * outputToClient = fopen(filename, "r");
 	
-	char outputBuff[1024] = {0};
-	int index = 0;
-	while (fgets(outputBuff, 1024, outputToClient) != NULL) {
-		write(socketFD, outputBuff, strlen(outputBuff));
-		index++;
-   }	
+	while (fgets(buffer, 1024, outputToClient) != NULL) {
+		// need to write a header first that has a byte for whether the incoming bytes are a line of the csv or not, and also how many bytes it is going to write for a specific line    	
+    	header[0] = '$';
+    	int lineLen = strlen(buffer);
+    	
+    	int LineIsSent = 0;
+    
+    	
+    	if(lineLen < 1000){
+    		strcat(header, "0");
+    		char rest[3];
+    		sprintf(rest, "%d", lineLen);
+    		strcat(header, rest);
+    		header[6] = '\0';
+    		write(socketFD, header, strlen(header));
+    	}
+    	else{
+    		char rest[4];
+    		sprintf(rest, "%d", lineLen);
+    		strcat(header, rest);
+    		header[6] = '\0';
+    		write(socketFD, header, strlen(header));	    	
+    	}
+    	
+    	//printf("header sent to client: %s\n", header);
+    	//printf("actual buffer length:%d\n", strlen(buffer) );
+    	//printf("Sorted row that is sent back to client:   %s\n", buffer);
+
+		write(socketFD, buffer, strlen(buffer));
+		
+		bzero(buffer, lineLen);
+		bzero(header, 6);
+    }
+
+
 
 // Sending message back to the client that it can stop grabbing sorted rows
-bzero(outputBuff, 1024);
-strcpy(outputBuff, "DONE");
-write(socketFD, outputBuff, strlen(outputBuff));
+bzero(buffer, 1024);
+strcpy(buffer, "DONE");
+buffer[5] = '\0';
+write(socketFD, buffer, strlen(buffer));
+
+
 
 fclose(outputToClient);
 
+
+
 // removing the sorted file on the server
 remove(filename);
+
+
+
+
 
 // Need to free all malloced structures for this client here:
 
 
 
+
+
 //printf("Done processing client: %d\n", clientID);
-	close(socketFD);
+
+
+//closing socket to make sure we don't lose space on file descriptor table
+close(socketFD);
+
 pthread_exit(NULL);
 }
 

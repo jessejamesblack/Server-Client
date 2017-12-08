@@ -43,6 +43,27 @@ int is_Valid_CSV(struct dirent *file)
 }
 
 
+int
+readn(int f, void *av, int n)
+{
+    char *a;
+    int m, t;
+
+    a = av;
+    t = 0;
+    while(t < n){
+        m = read(f, a+t, n-t);
+        if(m <= 0){
+            if(t == 0)
+                return m;
+            break;
+        }
+        t += m;
+    }
+    return t;
+}
+
+
 int main(int argc, char const *argv[])
 {
     long globalCounter = 0;
@@ -120,11 +141,11 @@ int main(int argc, char const *argv[])
 	return 1;
     }
 
-   // printf("directory: %s\n", directory);
-   // printf("output directory: %s\n", output_directory);
-  //  printf("column name: %s\n", columnName);
-  //  printf("port number: %s\n", port_number);
-  //  printf("host name: %s\n", host_name);
+   //printf("directory: %s\n", directory);
+   //printf("output directory: %s\n", output_directory);
+  //printf("column name: %s\n", columnName);
+  //printf("port number: %s\n", port_number);
+  //printf("host name: %s\n", host_name);
 
 struct addrinfo hints, *servinfo, *p;
 int rv;
@@ -162,20 +183,16 @@ if (p == NULL) {
     bzero(buffer, 50);
     
     if (strlen(columnName) < 10)
-		sprintf(buffer, "0%d", strlen(columnName)); 		    
+		sprintf(buffer, "0%lu", strlen(columnName)); 		    
     else
-    	sprintf(buffer, "%d", strlen(columnName));
+    	sprintf(buffer, "%lu", strlen(columnName));
     	
     strcat(buffer, columnName);
     write(sockfd, buffer, strlen(buffer));
    // printf("%s\n", buffer);
 
-    
-	// traverse directories spawning threads to send files to the server
-	// need to have a join loop after the traverse directories is done
-	// after the join loop, create a new result file and set everything up so the server can write the results back to this client
-	// have to send the server a dump request  
-	
+
+
 		 DIR *dir = opendir(directory);
         if (dir)
         {
@@ -200,15 +217,16 @@ if (p == NULL) {
         strcpy(argsdir->outputdirectory, output_directory);
         strcpy(argsdir->columnName, columnName);	
 	
-	
-	    sortDir(argsdir);
+	     sortDir(argsdir);
 	    
 	    
 	    int y = 0;
 	    for(y = 0; y < totalThreads; y++){
 	    	pthread_join(tids[y], NULL);
 	    }
-	   // printf("All files have been sent to the server.\n");	
+	    
+	    
+	//printf("All files have been sent to the server.\n");	
 	if(totalFiles != 0){
 
 	char outputty[1024];
@@ -223,34 +241,70 @@ if (p == NULL) {
 	
 	FILE * finalOutput = fopen(outputty, "w");	
 	
+	// printing header to output file
    fprintf(finalOutput, "color,director_name,num_critic_for_reviews,duration,director_facebook_likes,actor_3_facebook_likes,actor_2_name,actor_1_facebook_likes,gross,genres,actor_1_name,movie_title,num_voted_users,cast_total_facebook_likes,actor_3_name,facenumber_in_poster,plot_keywords,movie_imdb_link,num_user_for_reviews,language,country,content_rating,budget,title_year,actor_2_facebook_likes,imdb_score,aspect_ratio,movie_facebook_likes\n");
 				 
 		 
-		 /*
-		 ----------DUMP REQUEST----------
-		 */
+		// ----------DUMP REQUEST----------
+		 
+		 
 		 header[0] = '*';
-	    header[6] = '\0';
-	    write(sockfd, header, strlen(header));
+	    header[5] = '\0';
+	    write(sockfd, header, 5);
+	    bzero(header, 6);
+		 
 	    
-	// read lines from socket and write into finalOutput file
-	 int index = 0;
-	 while(1) {	
-	 	   b = recv(sockfd, buff, 1024, 0);
-	 		//printf("%d\n", index);
-			index++;
-			if(strstr(buff, "DONE")){
-				fwrite(buff, 1, b-4 ,finalOutput);	
-				break;
-			}
-			fwrite(buff, 1, b ,finalOutput);	
-			bzero(buff, 1024);
-	 }
+	    
+	// ----------GETTING THE SORTED ROWS BACK----------    
+
+		readn(sockfd, header, 5);	
+		//printf("header received from server: %s\n", header);	
+		
+		char bufferLen[5];
+		int a = 0;		
+		for(a = 0; a < 4; a++) {
+			bufferLen[a] = header[a+1];
+		}
+		bufferLen[4] = '\0';
+		int bufferLength = atoi(bufferLen);
+		//printf("initial bufferLength: %d\n", bufferLength);
+		
+ 		while(bufferLength != 0) 
+ 		{
+ 			//printf("bufferLength: %d\n", bufferLength);
+ 			
+ 			// reading another line sent by the client
+ 			readn(sockfd, buff, bufferLength);
+			buff[bufferLength] = '\0';
+			//printf("Sorted line that was received from server:   %s\n", buff);
+			
+			
+			fprintf(finalOutput, "%s", buff);	
+		   bzero(buff, 1024);
+		   bzero(header, 6);
+		   
+		   // reading the header again to get the next line legnth
+		   readn(sockfd, header, 5);
+		   header[5] = '\0';
+		  // printf("header: %s\n", header);
+				
+				   
+		for(a = 0; a < 4; a++) {
+			bufferLen[a] = header[a+1];
+		}
+		bufferLen[4] = '\0';
+		bufferLength = atoi(bufferLen);
+		
+		
+    }
 
 	
 	fclose(finalOutput);
 }
-   // printf("done, received final result file\n");
+
+close(sockfd);
+
+  // printf("done, received final result file, total files sent to server: %d\n", totalFiles);
     return 0;
 }
 
@@ -379,16 +433,14 @@ void * send_file(void * args)
     		char rest[3];
     		sprintf(rest, "%d", lineLen);
     		strcat(header, rest);
-    		header[6] = '\0';
-    		//printf("%s\n", header);
+    		header[5] = '\0';
     		write(sockfd, header, strlen(header));
     	}
     	else{
     		char rest[4];
     		sprintf(rest, "%d", lineLen);
     		strcat(header, rest);
-    		header[6] = '\0';
-    		//printf("%s\n", header);
+    		header[5] = '\0';
     		write(sockfd, header, strlen(header));	    	
     	}
     	//printf("actual buffer length:%d\n", strlen(buffer) );
@@ -405,7 +457,9 @@ void * send_file(void * args)
    
     fclose(fp);
    
+   // printf("file: %s\n  done.", arg->filename);
     pthread_mutex_unlock(&send_file_lock);
+    
     pthread_exit(NULL);
    
 }
