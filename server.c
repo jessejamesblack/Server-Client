@@ -5,6 +5,8 @@
 	pthread_mutex_t clientIDLock = PTHREAD_MUTEX_INITIALIZER;
 	pthread_mutex_t clientArrayLock = PTHREAD_MUTEX_INITIALIZER;
 	
+	
+	
 	int clientID = 0;
 	
 Returner * sorter(char * filename, char * columnName)
@@ -413,7 +415,6 @@ int main(int argc, char *argv[])
 {
 	printf("Received connections from: ");
 	fflush(stdout);
-		int clientArraySize = 50;
 	/*	if(argc < 3){
 			printf("invalid amount of arguments.\n");
 			return 1;
@@ -424,11 +425,10 @@ int main(int argc, char *argv[])
 	int port = atoi(portString);
 		// int port = 8080;
 		  
-	    int server_fd, new_socket, valread;
+	    int server_fd, new_socket;
 	    struct sockaddr_in address;
 	    int opt = 1;
 	    int addrlen = sizeof(address);
-	    char buffer[1024] = {0};
 	
 		 //printf("connection open for clients...\n");
 		 
@@ -465,9 +465,6 @@ int main(int argc, char *argv[])
 	        exit(EXIT_FAILURE);
 	   } 	   
 	   
-		int tidCount = 0;
-		int k = 0; // index for finding a spot to put the client in client array
-		int j = 0; // index for the join checking loop
 		char ipstr[INET6_ADDRSTRLEN];
 
 while ((new_socket = accept(server_fd, (struct sockaddr *)&address,(socklen_t *)&addrlen)))
@@ -480,16 +477,16 @@ while ((new_socket = accept(server_fd, (struct sockaddr *)&address,(socklen_t *)
       
 			printf("<%s> ", ipstr);
 			fflush(stdout);
-			k = 0;
-			j = 0;
+
+
 			ClientArgs * args = malloc(sizeof(*args));
 			args->clientID = clientID;
 			args->socketFD = new_socket;
 			pthread_t tid;
 			//need to lock this			
 			clientID++;		
-			pthread_create(&tid, NULL, clientHandler, args); 
-			pthread_mutex_unlock(&clientIDLock);
+			pthread_create(&tid, NULL, clientHandler, args);
+	pthread_mutex_unlock(&clientIDLock);
 	
  }
 	 return 0;
@@ -534,13 +531,9 @@ void * clientHandler (void * args){
 		FILE * file = fopen(filename, "wb");
 		
 		
-		char buffer[1024]; // buffer to read in lines of the files
-		char columnLen[5];
-		char columnName[1024];
-		int columnGet = 1;
-		int total = 0;
-		int b = 0;
-		int c = 0;
+		char buffer[1024] = {0}; // buffer to read in lines of the files
+		char columnLen[5] = {0};
+		char columnName[1024] = {0};
 		
 	   //grabbing the column from socket
 	   
@@ -565,10 +558,12 @@ void * clientHandler (void * args){
       int FileArraySize = 1000;
       struct Tokenizer **fileArray = malloc(FileArraySize * sizeof(struct Tokenizer *));
       int gQuoteCount = 0;
-		char header[6];
+		char header[6] = {0};
 		
 
-		readn(socketFD, header, 5);		
+		readn(socketFD, header, 5);
+		header[5] = '\0';
+		//printf("buffer received  %s\n", header);		
 		
 		char bufferLen[5];
 		int a = 0;		
@@ -578,22 +573,24 @@ void * clientHandler (void * args){
 		bufferLen[5] = '\0';
 		int bufferLength = atoi(bufferLen);
 		//printf("bufferLength: %d\n", bufferLength);
-		int bytes = 0;
+		
 		
 // getting all the unsorted rows from the client
  		while(1) 
  		{
  			//printf("bufferLength: %d\n", bufferLength);
  			// reading another line sent by the client
+ 			//printf("header received from client: %s\n", header);
+ 			
  			readn(socketFD, buffer, bufferLength);
 			buffer[bufferLength] = '\0';
 			//printf("What is going to be tokenized:   %s\n", buffer);
 			
-	
-	
 			/*  Tokenizing the row grabbed from the client and putting into row struct array.  */
          struct Tokenizer *newNode;
          newNode = TKCreate(buffer, gQuoteCount);
+         
+       //  printf("finished tokenize\n");
          if (fileSize > FileArraySize)
          {
             fileArray = realloc(fileArray, (2 * fileSize * (sizeof(struct Tokenizer *))));
@@ -610,19 +607,21 @@ void * clientHandler (void * args){
 		   
 		   // reading the header again to get the next line legnth and also to check if the client is done sending its rows
 		   readn(socketFD, header, 5);
-		   header[6] = '\0';
+		   
+		   header[5] = '\0';
 		 //  printf("header: %s\n", header);
-				
+			//fflush(stdout);
 				   
 		for(a = 0; a < 4; a++) {
 			bufferLen[a] = header[a+1];
 		}
-		bufferLen[5] = '\0';
+		bufferLen[4] = '\0';
 		bufferLength = atoi(bufferLen);
 		
 		
 		// client is done sending rows
 		if(header[0] == '*'){
+			//printf("client done sending rows\n");
 			break;		
 		}
 		
@@ -654,8 +653,6 @@ void * clientHandler (void * args){
 		// need to write a header first that has a byte for whether the incoming bytes are a line of the csv or not, and also how many bytes it is going to write for a specific line    	
     	header[0] = '$';
     	int lineLen = strlen(buffer);
-    	
-    	int LineIsSent = 0;
     
     	
     	if(lineLen < 1000){

@@ -1,6 +1,6 @@
 make default:
-	gcc -g -pthread -lm client.c -o client
-	gcc -g -pthread -lm server.c -o server
+	gcc -g -Wall -pthread -lm client.c -o client
+	gcc -g -Wall -pthread -lm server.c -o server
 	
 client:
 	gcc -g -pthread -lm client.c -o client
