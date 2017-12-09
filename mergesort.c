@@ -1,4 +1,4 @@
-#include "server.h"
+#include "sorter_server.h"
 
 void mymergesort(struct Tokenizer **arr, int size, char *columnName)
 {
