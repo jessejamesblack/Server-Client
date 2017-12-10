@@ -136,12 +136,32 @@ int main(int argc, char const *argv[])
         close(sockfd);
         return 1;
     }
+    
+	    
+    
+        if ((strcmp(columnName, "num_critic_for_reviews") == 0) || (strcmp(columnName, "duration") == 0) || (strcmp(columnName, "director_facebook_likes") == 0) || (strcmp(columnName, "actor_3_facebook_likes") == 0) || (strcmp(columnName, "actor_1_facebook_likes") == 0) || (strcmp(columnName, "gross") == 0) || (strcmp(columnName, "num_voted_users") == 0) || (strcmp(columnName, "cast_total_facebook_likes") == 0) || (strcmp(columnName, "facenumber_in_poster") == 0) || (strcmp(columnName, "num_user_for_reviews") == 0) || (strcmp(columnName, "budget") == 0) || (strcmp(columnName, "title_year") == 0) || (strcmp(columnName, "actor_2_facebook_likes") == 0) || (strcmp(columnName, "movie_facebook_likes") == 0) || (strcmp(columnName, "imdb_score") == 0) || (strcmp(columnName, "aspect_ratio") == 0) || (strcmp(columnName, "color") == 0) || (strcmp(columnName, "director_name") == 0) || (strcmp(columnName, "actor_2_name") == 0) || (strcmp(columnName, "genres") == 0) || (strcmp(columnName, "actor_1_name") == 0) || (strcmp(columnName, "movie_title") == 0) || (strcmp(columnName, "actor_3_name") == 0) || (strcmp(columnName, "plot_keywords") == 0) || (strcmp(columnName, "movie_imdb_link") == 0) || (strcmp(columnName, "language") == 0) || (strcmp(columnName, "country") == 0) || (strcmp(columnName, "content_rating") == 0))
+        {
+                ;
+        }
+        else
+        {
+                printf("Not a valid column to sort.\n");
+                return -1;
+        }
 
-    //printf("directory: %s\n", directory);
-    //printf("output directory: %s\n", output_directory);
-    //printf("column name: %s\n", columnName);
-    //printf("port number: %s\n", port_number);
-    //printf("host name: %s\n", host_name);
+    DIR *dir = opendir(directory);
+    if (dir)
+    {
+        /* Directory exists. */
+        closedir(dir);
+    }
+    else if (ENOENT == errno)
+    {
+        fflush(stdout);
+        printf("\nDirectory to search in is invalid. Please input valid directory. \n\n");
+        fflush(stdout);
+        return -1;
+    }
 
     struct addrinfo hints, *servinfo, *p;
     int rv;
@@ -154,7 +174,6 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
-    // loop through all the results and connect to the first we can
     for(p = servinfo; p != NULL; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype,p->ai_protocol)) == -1) {
             perror("socket");
@@ -167,7 +186,7 @@ int main(int argc, char const *argv[])
             continue;
         }
 
-        break; // if we get here, we must have connected successfully
+        break; 
     }
     if (p == NULL) {
         fprintf(stderr, "failed to connect\n");
@@ -187,20 +206,6 @@ int main(int argc, char const *argv[])
     write(sockfd, buffer, strlen(buffer));
 
 
-    DIR *dir = opendir(directory);
-    if (dir)
-    {
-        /* Directory exists. */
-        closedir(dir);
-    }
-    else if (ENOENT == errno)
-    {
-        fflush(stdout);
-        printf("\nDirectory to search in is invalid. Please input valid directory. \n\n");
-        fflush(stdout);
-        return -1;
-    }
-
     int obool = 0;
     ArgsDir *argsdir = malloc(sizeof(*argsdir));
     argsdir->obool = obool;
@@ -211,7 +216,6 @@ int main(int argc, char const *argv[])
     strcpy(argsdir->outputdirectory, output_directory);
     strcpy(argsdir->columnName, columnName);	
 
-    //printf("got all the arguments\n");	
 
     //send all the files to server
     sortDir(argsdir); 

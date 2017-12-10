@@ -372,7 +372,7 @@ int main(int argc, char *argv[])
         address.sin_port = htons(port);
 
     //printf("PORT: %d\n", port);
-          fflush(stdout);
+          fflush(stdout);
     
         if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
         {
@@ -404,18 +404,15 @@ int main(int argc, char *argv[])
             args->clientID = clientID;
             args->socketFD = new_socket;
             pthread_t tid;
-            //need to lock this			
             clientID++;		
-                pthread_create(&tid, NULL, clientHandler, args);
-            //pthread_join(tid, NULL);
+            pthread_create(&tid, NULL, clientHandler, args);
             pthread_mutex_unlock(&clientIDLock);
 
         }
     return 0;
 }
 
-
-    int
+int
 readn(int f, void *av, int n)
 {
     char *a;
