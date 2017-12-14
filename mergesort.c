@@ -19,12 +19,6 @@ void mymergesort(struct Tokenizer **arr, int size, char *columnName)
 }
 
 
-/*
---------------------------------------------------------------
-This is the nonthreaded merge for the initial files mergesort.
---------------------------------------------------------------
-*/
-
 void mymerge(struct Tokenizer **arr1, int size1, struct Tokenizer **arr2, int size2, struct Tokenizer **arr3, char *columnName)
 {
 

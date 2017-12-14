@@ -16,25 +16,34 @@ const char *get_filename_ext(const char *filename)
     return dot + 1;
 }
 
-int is_Valid_CSV(struct dirent *file)
+int is_Valid_CSV(struct dirent *file, char * columnName, char * path)
 {
     if (strstr(file->d_name, "-sorted-"))
     {
         return -1;
     }
-    if (strstr(file->d_name, "Client"))
-    {
-        return -1;
-    }
-    if (strstr(file->d_name, "output"))
-    {
-        return -1;
-    }
     if (strcasecmp(get_filename_ext(file->d_name), "csv") == 0)
     {
-        return 0;
+        char filename[4096];
+        strcpy(filename, path);
+        strcat(filename, "/");
+        strcat(filename, file->d_name); 
+        FILE * test = fopen(filename, "r");
+        char * buffer = NULL;
+        size_t n = 0;
+        getline(&buffer, &n, test);
+
+        if(strstr(buffer, columnName) != NULL){
+           fclose(test);
+           return 0;
+        }
+        else{
+            fclose(test);
+            return -1;
+        }
     }
 
+            
     return -1;
 }
 
@@ -166,7 +175,7 @@ int main(int argc, char const *argv[])
     struct addrinfo hints, *servinfo, *p;
     int rv;
     memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET; // use AF_INET6 to force IPv6
+    hints.ai_family = AF_INET; 
     hints.ai_socktype = SOCK_STREAM;
 
     if ((rv = getaddrinfo(host_name, port_number, &hints, &servinfo)) != 0) {
@@ -365,7 +374,7 @@ void *sortDir(void *argp)
             sortDir(argsdir);
 
         }
-        else if (is_Valid_CSV(currentDirFile) == 0)
+        else if (is_Valid_CSV(currentDirFile, columnName, path) == 0)
         {
             char outputPath[1024];
             strcpy(outputPath, path);
@@ -387,6 +396,7 @@ void *sortDir(void *argp)
 
             pthread_mutex_lock(&totalThreadsLock);
             totalFiles++;
+            //printf("total valid files: %d\n", totalFiles);
             pthread_mutex_unlock(&totalThreadsLock);
             files++;
             pthread_create(&tidsDir[files - 1], NULL, send_file, arg);
@@ -409,7 +419,6 @@ void *sortDir(void *argp)
 
 void * send_file(void * args)
 {
-    //pthread_mutex_lock(&send_file_lock);
     char header[6];
     bzero(header, 6);
     CArgs *arg = args;
@@ -430,11 +439,6 @@ void * send_file(void * args)
         fgets(head, 1024, fp);
 
 
-
-        //pthread_mutex_lock(&send_file_lock);
-
-
-
         while ((fgets(buffer, 1024, fp) != NULL) ) {
             //printf("\nin this loop\n");
             // need to write a header first that has a byte for whether the incoming bytes are a line of the csv or not, and also how many bytes it is going to write for a specific line    	
@@ -450,9 +454,7 @@ void * send_file(void * args)
                 header[5] = '\0';
                 //printf("header:  %s\n", header);
                 //printf("strlen of header: %d\n", strlen(header));
-                //	pthread_mutex_lock(&sendRow);
                 write(sockfd, header, strlen(header));
-                //	pthread_mutex_unlock(&sendRow);
                 //printf("header written successfully1\n");
 
             }
@@ -464,9 +466,7 @@ void * send_file(void * args)
                 header[5] = '\0';
                 //printf("header:  %s\n", header);
                 //printf("strlen of header: %d\n", strlen(header));
-                //	pthread_mutex_lock(&sendRow);
                 write(sockfd, header, strlen(header));
-                //	pthread_mutex_unlock(&sendRow);
                 //printf("header written successfully1\n");
             }
             else{
@@ -476,19 +476,15 @@ void * send_file(void * args)
                 header[5] = '\0';
                 //printf("header:  %s\n", header);
                 //printf("strlen of header: %d\n", strlen(header));
-                //	pthread_mutex_lock(&sendRow);
                 write(sockfd, header, strlen(header));	
-                //	pthread_mutex_unlock(&sendRow);
                 //	printf("header written successfully2\n");    	
             }
 
             //printf("header sent over?: %s\n", header);    	
             //printf("actual buffer length:%d\n", strlen(buffer));
 
-            //pthread_mutex_lock(&sendRow);
             write(sockfd, buffer, strlen(buffer));
 
-            //	pthread_mutex_unlock(&sendRow);
             //printf("is it hanging at the write statement?\n");		
 
 
@@ -501,14 +497,12 @@ void * send_file(void * args)
         }
 
 
-        //  pthread_mutex_unlock(&send_file_lock);
 
 
         fclose(fp);
     }
 
     //printf("file: %s\n  done.\n", arg->filename);
-    //pthread_mutex_unlock(&send_file_lock);
 
     pthread_exit(NULL);
 

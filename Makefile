@@ -37,6 +37,3 @@ test:
 	./sorter_client -c aspect_ratio -h $(HOST) -p $(PORT)
 	./sorter_client -c movie_facebook_likes -h $(HOST) -p $(PORT)
 	
-clean:
-	find /ilab/users/bcs115/Desktop/cs214project3 -type f -name '*-sorted-*' -delete
-	find /ilab/users/bcs115/Desktop/cs214project3 -type f -name 'Client*' -delete

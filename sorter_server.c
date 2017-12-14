@@ -396,7 +396,7 @@ int main(int argc, char *argv[])
             inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
 
 
-            printf("<%s> ", ipstr);
+            printf("<%s>, ", ipstr);
             fflush(stdout);
 
 
@@ -623,8 +623,7 @@ void * clientHandler (void * args){
 
 
 
-    // removing the sorted file on the server
-    remove(filename);
+//    remove(filename);
 
 
 
